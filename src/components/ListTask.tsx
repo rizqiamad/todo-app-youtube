@@ -2,33 +2,67 @@ import { FaCheckCircle, FaPencilAlt, FaRegCircle, FaTrashAlt } from "react-icons
 import { ITask } from "../App"
 import { KeyboardEvent, useState } from "react"
 import { PiUploadSimple } from "react-icons/pi"
+import axios from "../utils/axios"
+import { isAxiosError } from "axios"
 
 interface IProps {
   item: ITask
   listIdx: number
-  tasks: ITask[]
   setTasks: (param: ITask[]) => void
 }
 
-export default function ListTask({ item, listIdx, tasks, setTasks }: IProps) {
-  const [editedTask, setEditedTask] = useState<string>(tasks[listIdx].task)
+export default function ListTask({ item, listIdx, setTasks }: IProps) {
+  const [editedTask, setEditedTask] = useState<string>(item.task)
   const [isEditing, setIsEditing] = useState<boolean>(false)
 
-  const handleCheck = () => {
-    tasks[listIdx].isChecked = !tasks[listIdx].isChecked
-    setTasks([...tasks])
+  const getData = async () => {
+    try {
+      const { data } = await axios.get("/tasks")
+      setTasks(data.result)
+    } catch (err) {
+      if (isAxiosError(err)) {
+        console.log(err.response?.data.error)
+      }
+    }
   }
 
-  const handleDeleteTask = () => {
-    const newTasks = tasks.filter((_, idx) => idx !== listIdx)
-    setTasks(newTasks)
+  const handleCheck = async () => {
+    try {
+      const { data } = await axios.patch(`/tasks/check/${listIdx}`)
+      console.log(data.message)
+      getData()
+    } catch (err) {
+      if (isAxiosError(err)) {
+        console.log(err.response?.data.error)
+      }
+    }
   }
 
-  const handleConfirmEdit = () => {
+  const handleDeleteTask = async () => {
+    try {
+      const { data } = await axios.delete(`/tasks/${listIdx}`)
+      console.log(data.message)
+      getData()
+    } catch (err) {
+      if (isAxiosError(err)) {
+        console.log(err.response?.data.error)
+      }
+    }
+  }
+
+  const handleConfirmEdit = async () => {
     if (editedTask !== '') {
-      tasks[listIdx].task = editedTask
-      setTasks([...tasks])
-      setIsEditing(!isEditing)
+      try {
+        const { data } = await axios.patch(`/tasks/${listIdx}`, { task: editedTask })
+        console.log(data.message)
+        getData()
+      } catch (err) {
+        if (isAxiosError(err)) {
+          console.log(err.response?.data.errors)
+        }
+      } finally {
+        setIsEditing(!isEditing)
+      }
     }
   }
 

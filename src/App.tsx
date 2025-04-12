@@ -1,18 +1,40 @@
 import { KeyboardEvent, useEffect, useState } from "react"
 import ListTask from "./components/ListTask"
+import axios from "./utils/axios"
+import { isAxiosError } from "axios"
 
 export interface ITask {
+  id: string
   task: string
   isChecked: boolean
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState<ITask[]>(JSON.parse(localStorage.getItem("tasks") || '[]'))
+  const [tasks, setTasks] = useState<ITask[]>([])
   const [currentTask, setCurrentTask] = useState<string>("")
 
-  const handleAddTask = () => {
+  const getData = async () => {
+    try {
+      const { data } = await axios.get("/tasks")
+      setTasks(data.result)
+    } catch (err) {
+      if (isAxiosError(err)) {
+        console.log(err.response?.data.error)
+      }
+    }
+  }
+
+  const handleAddTask = async () => {
     if (currentTask !== '') {
-      setTasks([...tasks, { task: currentTask, isChecked: false }])
+      try {
+        const { data } = await axios.post("/tasks", { task: currentTask, isChecked: false })
+        console.log(data.message)
+        getData()
+      } catch (err) {
+        if (isAxiosError(err)) {
+          console.log(err.response?.data.errors)
+        }
+      }
       setCurrentTask("")
     }
   }
@@ -24,8 +46,8 @@ export default function App() {
   }
 
   useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks))
-  }, [tasks])
+    getData()
+  }, [])
 
   return (
     <main className="flex justify-center items-center h-screen bg-gradient-to-r from-indigo-500 to-purple-600">
@@ -49,10 +71,9 @@ export default function App() {
           {tasks.map((item, idx) => {
             return (
               <ListTask
-                key={idx}
+                key={item.id}
                 item={item}
                 listIdx={idx}
-                tasks={tasks}
                 setTasks={setTasks}
               />
             )
